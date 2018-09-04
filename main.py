@@ -65,7 +65,8 @@ class Playlist:
         if directory:
             self.scan(directory)
         if files:
-            self.files.extend(*files)
+            for f in files:
+                self.add.(f)
 
     def scan(self, directory):
         for f in scandir(directory):

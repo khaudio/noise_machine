@@ -6,7 +6,11 @@ from pyaudio import PyAudio
 import wave
 
 
-class Machine(PyAudio):
+class MissingAssetsException(BaseException):
+    pass
+
+
+class Player(PyAudio):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -17,11 +21,11 @@ class Machine(PyAudio):
         self.terminate()
 
 
-class Noise:
-    def __init__(self, machine, filename):
+class Sound:
+    def __init__(self, player, filename):
         with wave.open(filename, 'rb') as wav:
-            self.stream = machine.open(
-                    format=machine.get_format_from_width(wav.getsampwidth()),
+            self.stream = player.open(
+                    format=player.get_format_from_width(wav.getsampwidth()),
                     channels=wav.getnchannels(),
                     rate=wav.getframerate(),
                     output=True
@@ -46,39 +50,49 @@ class Noise:
         for chunk in (cycle(self.loaded) if loop else self.loaded):
             self.stream.write(chunk)
 
-    def play_lite(self, wav, loop=True):
-        loading = load_wav(wav)
-        while True:
-            chunk = yield loading
-            if len(chunk) < 1024 and loop:
-                loading = load_wav(wav)
-            self.stream.write(chunk)
+    # def play_lite(self, wav, loop=True):
+    #     loading = load_wav(wav)
+    #     while True:
+    #         chunk = yield loading
+    #         if len(chunk) < 1024 and loop:
+    #             loading = load_wav(wav)
+    #         self.stream.write(chunk)
 
 
 class Playlist:
-    def __init__(self, *sounds):
-        self.files = [*sounds]
-        self.machine, self.sounds = Machine(), []
-        self.add(*self.files)
+    def __init__(self, directory=None, files=None):
+        self.player, self.files = Player(), []
+        if directory:
+            self.scan(directory)
+        if files:
+            self.files.extend(*files)
 
     def scan(self, directory):
         for f in scandir(directory):
-            if not f.is_dir()
-                self.files.append(f.path)
+            if not f.is_dir():
+                self.add(f.path)
 
-    def add(self, *sounds):
-        for sound in sounds:
-            self.sounds.append(Noise(self.machine, sound))
+    def add(self, filepath):
+        assert isinstance(filepath, str), 'Must be str'
+        self.files.append(filepath)
 
-    def start(self):
-        with self.machine as machine:
+    def start(self, loop=True):
+        if not self.files:
+            raise MissingAssetsException('Must add files to play')
+        with self.player as player:
             try:
-                self.sounds[0].play(loop=True)
+                for f in self.files:
+                    with Sound(self.player, f) as sound:
+                        sound.play(loop=loop)
             except KeyboardInterrupt:
                 return
 
 
+class Machine:
+    def __init__(self):
+        pass
+
+
 if __name__ == '__main__':
-    f = 'audio_files/pinkNoise_01.wav'
-    p = Playlist(f)
+    p = Playlist('./Other/audio_files')
     p.start()

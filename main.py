@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
 from itertools import cycle
-from os import scandir
+from os import scandir, path
 from pyaudio import PyAudio
+import time
 import wave
+
+"""A simple noise machine with selectable looping sounds"""
 
 
 class MissingAssetsException(BaseException):
@@ -22,7 +25,9 @@ class Player(PyAudio):
 
 
 class Sound:
-    def __init__(self, player, filename):
+    def __init__(self, player, filename, loop=True):
+        self.loop = loop
+        self.filename = filename
         with wave.open(filename, 'rb') as wav:
             self.stream = player.open(
                     format=player.get_format_from_width(wav.getsampwidth()),
@@ -30,7 +35,7 @@ class Sound:
                     rate=wav.getframerate(),
                     output=True
                 )
-            self.loaded = [block for block in self.load_wav(wav)]
+            self.buffer = [chunk for chunk in self.load_wav(wav)]
 
     def __enter__(self):
         return self
@@ -41,59 +46,125 @@ class Sound:
 
     @staticmethod
     def load_wav(wav, chunkSize=1024):
-        data = wav.readframes(chunkSize)
-        while data:
-            yield data
-            data = wav.readframes(chunkSize)
+        chunk = wav.readframes(chunkSize)
+        while chunk:
+            yield chunk
+            chunk = wav.readframes(chunkSize)
 
-    def play(self, loop=True):
-        for chunk in (cycle(self.loaded) if loop else self.loaded):
+    def play(self):
+        for chunk in (cycle(self.buffer) if self.loop else self.buffer):
             self.stream.write(chunk)
-
-    # def play_lite(self, wav, loop=True):
-    #     loading = load_wav(wav)
-    #     while True:
-    #         chunk = yield loading
-    #         if len(chunk) < 1024 and loop:
-    #             loading = load_wav(wav)
-    #         self.stream.write(chunk)
 
 
 class Playlist:
-    def __init__(self, directory=None, files=None):
+    def __init__(self, directory=None, files=None, repeat=True, verbose=True):
+        self.alive = True
         self.player, self.files = Player(), []
+        self.current, self.index = None, 0
+        self.repeat, self.repeated = repeat, 0
+        self.verbose = verbose
         if directory:
             self.scan(directory)
         if files:
             for f in files:
-                self.add.(f)
+                self.add(f)
+            self.current = self.files[0]
 
-    def scan(self, directory):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.stop()
+
+    def __iter__(self):
+        self.index = 0
+        self.current = self.sounds[self.index]
+        return self
+
+    def __next__(self):
+        try:
+            self.current = self.sounds[self.index]
+        except IndexError:
+            if self.repeat is True:
+                pass
+            elif self.repeated < self.repeat:
+                self.repeated += 1
+            else:
+                raise StopIteration()
+            self.index = 0
+            return next(self)
+        else:
+            self.index += 1
+            return self.current
+
+    def __len__(self):
+        return len(self.sounds)
+
+    def __gt__(self, other):
+        return self.sounds > other.sounds
+
+    def __ge__(self, other):
+        return self.sounds >= other.sounds
+
+    def __lt__(self, other):
+        return self.sounds < other.sounds
+
+    def __le__(self, other):
+        return self.sounds <= other.sounds
+
+    @property
+    def sounds(self):
+        return sorted(self.files, key=lambda f: path.basename(f))
+
+    @property
+    def repeat(self):
+        return self._repeat
+
+    @repeat.setter
+    def repeat(self, val):
+        if val is True:
+            self._repeat = True
+        elif not val:
+            self._repeat = 0
+        elif isinstance(val, int):
+            self._repeat = val
+        elif isinstance(val, float):
+            self._repeat = int(val)
+        else:
+            raise IndexError('Must be bool, int, or float')
+
+    def scan(self, directory, recursive=True):
+        assert isinstance(directory, str), 'Must be str'
         for f in scandir(directory):
             if not f.is_dir():
                 self.add(f.path)
+            elif recursive:
+                self.scan(f.paths)
 
     def add(self, filepath):
         assert isinstance(filepath, str), 'Must be str'
         self.files.append(filepath)
 
+    def play(self, filepath, **kwargs):
+        try:
+            with Sound(self.player, filepath, **kwargs) as sound:
+                sound.play()
+        except KeyboardInterrupt:
+            return
+
+    def stop(self):
+        self.player.terminate()
+        self.alive = False
+
     def start(self, loop=True):
-        if not self.files:
+        if not self.sounds:
             raise MissingAssetsException('Must add files to play')
-        with self.player as player:
-            try:
-                for f in self.files:
-                    with Sound(self.player, f) as sound:
-                        sound.play(loop=loop)
-            except KeyboardInterrupt:
-                return
-
-
-class Machine:
-    def __init__(self):
-        pass
+        for sound in iter(self):
+            if self.verbose:
+                print(f'Playing {sound}')
+            self.play(sound, loop=loop)
 
 
 if __name__ == '__main__':
-    p = Playlist('./Other/audio_files')
-    p.start()
+    with Playlist('./Other/audio_files') as p:
+        p.start(loop=False)

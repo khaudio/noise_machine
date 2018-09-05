@@ -1,3 +1,5 @@
 __pycache__
-example.mp3
 .DS_Store
+thinkdsp.py
+thinkplot.py
+scipy_spectral.py

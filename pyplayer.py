@@ -165,7 +165,7 @@ class Playlist:
                 if self.verbose:
                     print('Playing {}'.format(path.basename(filepath)))
                 sound.play(self.queue)
-        except KeyboardInterrupt or SkipTrack:
+        except SkipTrack:
             return
 
     def skip(self):
@@ -183,5 +183,5 @@ class Playlist:
         for sound in self:
             try:
                 self.play(self.current, loop=loop)
-            except SkipTrack:
+            except KeyboardInterrupt:
                 pass

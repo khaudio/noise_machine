@@ -144,6 +144,7 @@ class Playlist:
         self.files.append(filepath)
 
     def play(self, filepath, **kwargs):
+        assert self.alive
         try:
             with Sound(self.player, filepath, **kwargs) as sound:
                 if self.verbose:
@@ -153,12 +154,11 @@ class Playlist:
             return
 
     def stop(self):
-        self.player.terminate()
         self.alive = False
+        self.player.terminate()
 
     def start(self, loop=True):
         if not self.sounds:
             raise MissingAssetsException('Must add files to play')
-        for sound in iter(self):
-            if self.alive:
-                self.play(sound, loop=loop)
+        for sound in self:
+            self.play(self.current, loop=loop)

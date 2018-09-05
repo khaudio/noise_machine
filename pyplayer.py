@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 
+from collections import deque
 from itertools import cycle
 from os import scandir, path
 from pyaudio import PyAudio
 import wave
-from multiprocessing import Queue
-from queue import Empty
 
 """A simple audio playlist with selectable looping sounds"""
 
@@ -55,13 +54,10 @@ class Sound:
             yield chunk
             chunk = wav.readframes(chunkSize)
 
-    def play(self, queue=None):
+    def play(self, deque=None):
         for chunk in (cycle(self.buffer) if self.loop else self.buffer):
-            try:
-                if queue.get(block=False):
-                    raise SkipTrack()
-            except Empty:
-                pass
+            if len(deque):
+                raise SkipTrack()
             self.stream.write(chunk)
 
 
@@ -72,7 +68,7 @@ class Playlist:
         self.current, self.index = None, 0
         self.repeat, self.repeated = repeat, 0
         self.verbose = verbose
-        self.queue = Queue()
+        self.deque = deque(maxlen=1)
         if directory:
             self.scan(directory)
         if files:
@@ -158,18 +154,18 @@ class Playlist:
     def play(self, filepath, **kwargs):
         assert self.alive
         try:
-            self.queue = Queue()
+            self.deque.clear()
             with Sound(self.player, filepath, **kwargs) as sound:
                 if self.verbose:
                     print('Playing {}'.format(path.basename(filepath)))
-                sound.play(self.queue)
+                sound.play(self.deque)
         except SkipTrack:
             return
 
     def skip(self):
         if self.verbose:
             print('Skipping')
-        self.queue.put(True)
+        self.deque.append(True)
 
     def stop(self):
         self.alive = False

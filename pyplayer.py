@@ -29,7 +29,7 @@ class Player(PyAudio):
 
 
 class Sound:
-    def __init__(self, player, filename, loop=True, q=None):
+    def __init__(self, player, filename, loop=True):
         self.loop = loop
         with wave.open(filename, 'rb') as wav:
             self.stream = player.open(
@@ -178,4 +178,4 @@ class Playlist:
             try:
                 self.play(self.current, loop=loop)
             except KeyboardInterrupt:
-                pass
+                return

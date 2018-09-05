@@ -12,5 +12,5 @@ class NoiseMachine(Playlist):
 
 
 if __name__ == '__main__':
-    with NoiseMachine('./Other/audio_files', repeat=2) as machine:
-        machine.start(loop=False)
+    with NoiseMachine('./Other/audio_files') as machine:
+        machine.start()

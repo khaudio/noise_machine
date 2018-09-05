@@ -4,7 +4,7 @@ from pyplayer import Playlist
 
 
 class NoiseMachine(Playlist):
-    def __init__(*args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
 

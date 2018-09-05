@@ -4,11 +4,17 @@ from itertools import cycle
 from os import scandir, path
 from pyaudio import PyAudio
 import wave
+from multiprocessing import Queue
+from queue import Empty
 
 """A simple audio playlist with selectable looping sounds"""
 
 
-class MissingAssetsException(BaseException):
+class MissingAssetsException(Exception):
+    pass
+
+
+class SkipTrack(Exception):
     pass
 
 
@@ -24,7 +30,8 @@ class Player(PyAudio):
 
 
 class Sound:
-    def __init__(self, player, filename, loop=True):
+    def __init__(self, player, filename, loop=True, q=None):
+        self.alive = True
         self.loop = loop
         with wave.open(filename, 'rb') as wav:
             self.stream = player.open(
@@ -39,6 +46,7 @@ class Sound:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        self.alive = False
         self.stream.stop_stream()
         self.stream.close()
 
@@ -49,8 +57,13 @@ class Sound:
             yield chunk
             chunk = wav.readframes(chunkSize)
 
-    def play(self):
+    def play(self, queue=None):
         for chunk in (cycle(self.buffer) if self.loop else self.buffer):
+            try:
+                if queue.get(block=False):
+                    raise SkipTrack()
+            except Empty:
+                pass
             self.stream.write(chunk)
 
 
@@ -61,6 +74,7 @@ class Playlist:
         self.current, self.index = None, 0
         self.repeat, self.repeated = repeat, 0
         self.verbose = verbose
+        self.queue = Queue()
         if directory:
             self.scan(directory)
         if files:
@@ -146,12 +160,18 @@ class Playlist:
     def play(self, filepath, **kwargs):
         assert self.alive
         try:
+            self.queue = Queue()
             with Sound(self.player, filepath, **kwargs) as sound:
                 if self.verbose:
-                    print(f'Playing {path.basename(filepath)}')
-                sound.play()
-        except KeyboardInterrupt:
+                    print('Playing {}'.format(path.basename(filepath)))
+                sound.play(self.queue)
+        except KeyboardInterrupt or SkipTrack:
             return
+
+    def skip(self):
+        if self.verbose:
+            print('Skipping')
+        self.queue.put(True)
 
     def stop(self):
         self.alive = False
@@ -161,4 +181,7 @@ class Playlist:
         if not self.sounds:
             raise MissingAssetsException('Must add files to play')
         for sound in self:
-            self.play(self.current, loop=loop)
+            try:
+                self.play(self.current, loop=loop)
+            except SkipTrack:
+                pass

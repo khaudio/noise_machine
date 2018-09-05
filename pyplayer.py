@@ -31,7 +31,6 @@ class Player(PyAudio):
 
 class Sound:
     def __init__(self, player, filename, loop=True, q=None):
-        self.alive = True
         self.loop = loop
         with wave.open(filename, 'rb') as wav:
             self.stream = player.open(
@@ -46,7 +45,6 @@ class Sound:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.alive = False
         self.stream.stop_stream()
         self.stream.close()
 

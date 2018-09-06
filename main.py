@@ -7,7 +7,7 @@ from pyplayer import Playlist
 class NoiseMachine(Playlist):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.button = Button(26)
+        self.button = Button(23)
         self.button.when_pressed = super().skip
 
 

@@ -54,9 +54,9 @@ class Sound:
             yield chunk
             chunk = wav.readframes(chunkSize)
 
-    def play(self, deque=None):
+    def play(self, skip=None):
         for chunk in (cycle(self.buffer) if self.loop else self.buffer):
-            if len(deque):
+            if skip:
                 raise SkipTrack()
             self.stream.write(chunk)
 
@@ -68,7 +68,7 @@ class Playlist:
         self.current, self.index = None, 0
         self.repeat, self.repeated = repeat, 0
         self.verbose = verbose
-        self.deque = deque(maxlen=1)
+        self.skip = False
         if directory:
             self.scan(directory)
         if files:
@@ -154,18 +154,18 @@ class Playlist:
     def play(self, filepath, **kwargs):
         assert self.alive
         try:
-            self.deque.clear()
+            self.skip = False
             with Sound(self.player, filepath, **kwargs) as sound:
                 if self.verbose:
                     print('Playing {}'.format(path.basename(filepath)))
-                sound.play(self.deque)
+                sound.play(self.skip)
         except SkipTrack:
             return
 
     def skip(self):
         if self.verbose:
             print('Skipping')
-        self.deque.append(True)
+        self.skip = True
 
     def stop(self):
         self.alive = False

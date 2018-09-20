@@ -34,7 +34,6 @@ class QuadratureEncoder:
     def monitor(self):
         while self.alive:
             yield from self.read()
-            sleep(.0001)
 
 
 class NoiseMachine(Playlist):
@@ -63,7 +62,7 @@ class NoiseMachine(Playlist):
             device.close()
         self.volumeMonitor.join()
         self.save()
-        super().__exit__()
+        super().__exit__(exc_type, exc_value, traceback)
 
     def save(self):
         with open('meta.json', 'wb') as meta:

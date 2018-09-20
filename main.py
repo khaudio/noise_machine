@@ -22,18 +22,21 @@ class QuadratureEncoder:
             device.close()
 
     def read(self):
-        clock, data = self.clock.value, self.data.value
-        if clock != self.last and self.last is not None:
-            if clock ^ data:
-                yield -.05
-            else:
-                yield .05
-            self.last = clock
+        try:
+            clock, data = self.clock.value, self.data.value
+            if clock != self.last:
+                if clock ^ data:
+                    yield -.05
+                else:
+                    yield .05
+                self.last = clock
+        except Exception as e:
+            print(e)
+            raise e
 
     def monitor(self):
         while self.alive:
             yield from self.read()
-
 
 class NoiseMachine(Playlist):
     def __init__(

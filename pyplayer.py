@@ -156,11 +156,12 @@ class Playlist:
             scaled = 1
         else:
             scaled = val
+            if scaled > 0:
+                self.lastScaled = scaled
         with self.lock:
             self._scaler.append(scaled)
-            self.lastScale = scaled
-            if self.verbose:
-                print('Scale: {}'.format(self._scaler[0]))
+        if self.verbose:
+            print('Scale: {}'.format(self._scaler[0]))
 
     def increment_scale(self, increment=.1):
         self.scale += increment

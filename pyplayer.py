@@ -2,6 +2,7 @@
 
 from collections import deque
 from itertools import cycle
+from multiprocessing import Lock
 from os import scandir, path
 from pyaudio import PyAudio
 import numpy as np
@@ -68,13 +69,14 @@ class Sound:
 
 class Playlist:
     def __init__(self, filepath, repeat=True, verbose=True):
-        self.alive = True
+        self.alive, self.lock = True, Lock()
         self.player, self.files = PyAudio(), []
         self.current, self.index = None, 0
         self.repeat, self.repeated = repeat, 0
         self.verbose = verbose
         self.skip = False
-        self.scaler = deque((0.5,), maxlen=1)
+        self._scaler = deque((0.5,), maxlen=1)
+        self.scale = .5
         self.scan(filepath)
         self.current = self.files[0]
 
@@ -143,21 +145,23 @@ class Playlist:
 
     @property
     def scale(self):
-        return self.scaler[0]
+        with self.lock:
+            return self._scaler[0]
 
     @scale.setter
     def scale(self, val):
-        assert isinstance(val, (int, float)), 'Must be int or float'
-        if val <= 0:
-            scaled = 0
-        elif val >= 1:
-            scaled = 1
-        else:
-            scaled = val
-        self.scaler.append(scaled)
-        self.lastScale = scaled
-        if self.verbose:
-            print('Scale: {}'.format(self.scale))
+        with self.lock:
+            assert isinstance(val, (int, float)), 'Must be int or float'
+            if val <= 0:
+                scaled = 0
+            elif val >= 1:
+                scaled = 1
+            else:
+                scaled = val
+            self._scaler.append(scaled)
+            self.lastScale = scaled
+            if self.verbose:
+                print('Scale: {}'.format(self._scaler[0]))
 
     def increment_scale(self, increment=.1):
         self.scale += increment
@@ -185,7 +189,7 @@ class Playlist:
             with Sound(self.player, filepath, **kwargs) as sound:
                 if self.verbose:
                     print('Playing {}'.format(path.basename(filepath)))
-                sound.play(self.skip, scaler=self.scaler)
+                sound.play(self.skip, scaler=self._scaler)
         except SkipTrack:
             return
 

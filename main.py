@@ -3,7 +3,6 @@
 from gpiozero import Button, DigitalInputDevice
 from pyplayer import Playlist
 from threading import Thread
-from multiprocessing import Lock
 from time import sleep
 import json
 
@@ -24,7 +23,7 @@ class QuadratureEncoder:
 
     def read(self):
         clock, data = self.clock.value, self.data.value
-        if clock != self.last:
+        if clock != self.last and self.last is not None:
             if clock ^ data:
                 yield -.05
             else:
@@ -45,13 +44,12 @@ class NoiseMachine(Playlist):
         super().__init__(filepath, *args, **kwargs)
         self.load()
         self.volumeRotary = QuadratureEncoder(clockPin, dataPin)
-        self.skipButton = Button(skipButton)
+        self.volumeMonitor = Thread(target=self.monitor_volume)
+        self.volumeMonitor.start()
+        self.skipButton = Button(skipButton, bounce_time=.005)
         self.skipButton.when_pressed = super().skip
         self.muteButton = Button(muteButton, bounce_time=.005)
         self.muteButton.when_pressed = super().toggle_mute
-        self.volumeMonitor = Thread(target=self.monitor_volume)
-        self.volumeMonitor.start()
-        self.lock = Lock()
         self.devices = (self.volumeRotary, self.skipButton, self.muteButton)
 
     def __enter__(self):
@@ -79,7 +77,6 @@ class NoiseMachine(Playlist):
 
     def monitor_volume(self):
         for increment in self.volumeRotary.monitor():
-            # with self.lock:
             super().increment_scale(increment)
 
 

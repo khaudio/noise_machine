@@ -38,7 +38,10 @@ class QuadratureEncoder:
 
 
 class NoiseMachine(Playlist):
-    def __init__(self, clockPin, dataPin, skipButton, muteButton, *args, **kwargs):
+    def __init__(
+            self, clockPin=17, dataPin=27, muteButton=23, skipButton=22,
+            *args, **kwargs
+        ):
         super().__init__(*args, **kwargs)
         self.load()
         self.volumeRotary = QuadratureEncoder(clockPin, dataPin)

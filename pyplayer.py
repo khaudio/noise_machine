@@ -38,7 +38,7 @@ class Sound:
                     rate=wav.getframerate(),
                     output=True
                 )
-            self.buffer = [chunk for chunk in self.load_wav(wav)]
+            self.buffer = [chunk for chunk in self.load(wav, array=loop)]
 
     def __enter__(self):
         return self
@@ -47,17 +47,28 @@ class Sound:
         self.stream.stop_stream()
         self.stream.close()
 
-    @staticmethod
-    def load_wav(wav, chunkSize=1024):
-        chunk = wav.readframes(chunkSize)
-        while chunk:
-            yield chunk
-            chunk = wav.readframes(chunkSize)
+    @property
+    def player(self):
+        return self._player
 
-    def play(self, skip=None):
+    @player.setter
+    def player(self, val):
+        assert isinstance(val, PyAudio), 'Must be PyAudio obj'
+        self._player = val
+
+    @staticmethod
+    def load(wav, chunkSize=1024, array=True):
+        chunk = np.frombuffer(chunk, dtype=np.int16) if array else wav.readframes(chunkSize)
+        while chunk > 0:
+            yield chunk
+            chunk = np.frombuffer(chunk, dtype=np.int16) if array else wav.readframes(chunkSize)
+
+    def play(self, skip=None, scale=1.0):
         for chunk in (cycle(self.buffer) if self.loop else self.buffer):
             if skip:
                 raise SkipTrack()
+            if self.loop:
+                chunk = (chunk * scale).astype(np.int16).tostring()
             self.stream.write(chunk)
 
 
@@ -69,6 +80,7 @@ class Playlist:
         self.repeat, self.repeated = repeat, 0
         self.verbose = verbose
         self.skip = False
+        self.scale = 1.0
         if directory:
             self.scan(directory)
         if files:
@@ -158,7 +170,7 @@ class Playlist:
             with Sound(self.player, filepath, **kwargs) as sound:
                 if self.verbose:
                     print('Playing {}'.format(path.basename(filepath)))
-                sound.play(self.skip)
+                sound.play(self.skip, scale=self.scale)
         except SkipTrack:
             return
 

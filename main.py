@@ -43,7 +43,7 @@ class NoiseMachine(Playlist):
             clockPin=17, dataPin=27, muteButton=22, skipButton=23,
             *args, **kwargs
         ):
-        super().__init__(directory=directory, files=files, *args, **kwargs)
+        super().__init__(filepath, *args, **kwargs)
         self.load()
         self.volumeRotary = QuadratureEncoder(clockPin, dataPin)
         self.skipButton = Button(skipButton)

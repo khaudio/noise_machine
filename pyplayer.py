@@ -39,7 +39,7 @@ class Sound:
                     rate=wav.getframerate(),
                     output=True
                 )
-            self.buffer = [chunk for chunk in self.load(wav, array=loop)]
+            self.buffer = [chunk for chunk in self.load(wav)]
 
     def __enter__(self):
         return self
@@ -70,13 +70,13 @@ class Sound:
                 yield chunk
             chunk = wav.readframes(chunkSize)
 
-    def play(self, skip=None, scale=1.0):
+    def play(self, skip=None, scale=1.0, scaler=None):
         for chunk in (cycle(self.buffer) if self.loop else self.buffer):
             if skip:
                 raise SkipTrack()
-            if self.loop:
-                chunk = (chunk * scale).astype(np.int16).tostring()
-            self.stream.write(chunk)
+            if scaler:
+                scale = scaler[0]
+            self.stream.write((chunk * scale).astype(np.int16).tostring())
 
 
 class Playlist:
@@ -87,7 +87,7 @@ class Playlist:
         self.repeat, self.repeated = repeat, 0
         self.verbose = verbose
         self.skip = False
-        self.scale = 1.0
+        self.scaler = deque((1.0,), maxlen=1)
         if directory:
             self.scan(directory)
         if files:
@@ -177,7 +177,7 @@ class Playlist:
             with Sound(self.player, filepath, **kwargs) as sound:
                 if self.verbose:
                     print('Playing {}'.format(path.basename(filepath)))
-                sound.play(self.skip, scale=self.scale)
+                sound.play(self.skip, scaler=self.scaler)
         except SkipTrack:
             return
 

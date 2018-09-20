@@ -16,10 +16,11 @@ class NoiseMachine(Playlist):
         self.volumeCycle.when_pressed = self.scale_output
 
     def scale_output(self):
-        if self.scale < 1.0:
-            self.scale += .1
+        scale = self.scaler[0] + .1
+        if scale >= 1.0:
+            self.scaler.append(0)
         else:
-            self.scale = 0.0
+            self.scaler.append(scale)
 
 
 if __name__ == '__main__':

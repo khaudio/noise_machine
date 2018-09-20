@@ -158,6 +158,25 @@ class Playlist:
         else:
             raise IndexError('Must be bool, int, or float')
 
+    @property
+    def scale(self):
+        return self.scaler[0]
+
+    @scale.setter
+    def scale(self, val):
+        assert isinstance(val, (int, float)), 'Must be int or float'
+        if val <= 0:
+            scaled = 0
+        elif val >= 1:
+            scaled = 1
+        else:
+            scaled = val
+        self.scaler.append(scaled)
+        self.lastScale = scaled
+
+    def increment_scale(self, increment=.1):
+        self.scale += increment
+
     def scan(self, directory, recursive=True):
         assert isinstance(directory, str), 'Must be str'
         for f in scandir(directory):
@@ -185,6 +204,19 @@ class Playlist:
         if self.verbose:
             print('Skipping')
         self.skip = True
+
+    def mute(self):
+        self.lastScale = self.scale
+        self.scale = 0
+
+    def unmute(self):
+        self.scale = self.lastScale
+
+    def toggle_mute(self):
+        if self.scale > 0:
+            self.mute()
+        else:
+            self.unmute()
 
     def stop(self):
         self.alive = False

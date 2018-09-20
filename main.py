@@ -15,8 +15,9 @@ class NoiseMachine(Playlist):
         self.volumeCycle = Button(23)
         self.volumeCycle.when_pressed = self.scale_output
 
-    def scale_output(self):
-        scale = self.scaler[0] + .1
+    def scale_output(self, increment=.1):
+        assert isinstance(increment, float), 'Increment must be float'
+        scale = self.scaler[0] + increment
         if scale >= 1.0:
             self.scaler.append(0)
         else:

@@ -67,20 +67,16 @@ class Sound:
 
 
 class Playlist:
-    def __init__(self, directory=None, files=None, repeat=True, verbose=True):
+    def __init__(self, filepath, repeat=True, verbose=True):
         self.alive = True
         self.player, self.files = PyAudio(), []
         self.current, self.index = None, 0
         self.repeat, self.repeated = repeat, 0
         self.verbose = verbose
         self.skip = False
-        self.scaler = deque((1.0,), maxlen=1)
-        if directory:
-            self.scan(directory)
-        if files:
-            for f in files:
-                self.add(f)
-            self.current = self.files[0]
+        self.scaler = deque((0.5,), maxlen=1)
+        self.scan(filepath)
+        self.current = self.files[0]
 
     def __enter__(self):
         return self
@@ -160,17 +156,23 @@ class Playlist:
             scaled = val
         self.scaler.append(scaled)
         self.lastScale = scaled
+        if self.verbose:
+            print('Scale: {}'.format(self.scale))
 
     def increment_scale(self, increment=.1):
         self.scale += increment
 
-    def scan(self, directory, recursive=True):
-        assert isinstance(directory, str), 'Must be str'
-        for f in scandir(directory):
-            if not f.is_dir():
-                self.add(f.path)
-            elif recursive:
-                self.scan(f.paths)
+    def scan(self, filepath, recursive=True):
+        assert isinstance(filepath, str), 'Must be str'
+        try:
+            for f in scandir(filepath):
+                if not f.is_dir():
+                    self.add(f.path)
+                elif recursive:
+                    self.scan(f.path)
+        except NotADirectoryError:
+            if path.exists:
+                self.add(filepath)
 
     def add(self, filepath):
         assert isinstance(filepath, str), 'Must be str'

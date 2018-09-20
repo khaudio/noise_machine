@@ -39,25 +39,28 @@ class QuadratureEncoder:
 
 class NoiseMachine(Playlist):
     def __init__(
-            self, clockPin=17, dataPin=27, muteButton=23, skipButton=22,
+            self, filepath,
+            clockPin=17, dataPin=27, muteButton=22, skipButton=23,
             *args, **kwargs
         ):
-        super().__init__(*args, **kwargs)
         self.load()
         self.volumeRotary = QuadratureEncoder(clockPin, dataPin)
         self.skipButton = Button(skipButton)
         self.skipButton.when_pressed = super().skip
-        self.mute = Button(muteButton, bounce_time=.005)
-        self.mute.when_pressed = super().toggle_mute
+        self.muteButton = Button(muteButton, bounce_time=.005)
+        self.muteButton.when_pressed = super().toggle_mute
         self.volumeMonitor = Thread(target=self.monitor_volume)
         self.volumeMonitor.start()
         self.lock = Lock()
+        self.devices = (self.volumeRotary, self.skipButton, self.muteButton)
+        super().__init__(filepath=filepath, *args, **kwargs)
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.volumeRotary.close()
+        for device in self.devices:
+            device.close()
         self.volumeMonitor.join()
         self.save()
         super().__exit__()
@@ -77,8 +80,8 @@ class NoiseMachine(Playlist):
 
     def monitor_volume(self):
         for increment in self.volumeRotary.monitor():
-            with self.lock:
-                super().increment_scale(increment)
+            # with self.lock:
+            super().increment_scale(increment)
 
 
 if __name__ == '__main__':

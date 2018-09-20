@@ -18,17 +18,6 @@ class SkipTrack(Exception):
     pass
 
 
-# class Player(PyAudio):
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-#
-#     def __enter__(self):
-#         return self
-#
-#     def __exit__(self, exc_type, exc_value, traceback):
-#         self.terminate()
-
-
 class Sound:
     def __init__(self, player, filename, loop=True):
         self.loop = loop
@@ -70,13 +59,11 @@ class Sound:
                 yield chunk
             chunk = wav.readframes(chunkSize)
 
-    def play(self, skip=None, scale=1.0, scaler=None):
+    def play(self, skip=None, scaler=(1.0,)):
         for chunk in (cycle(self.buffer) if self.loop else self.buffer):
             if skip:
                 raise SkipTrack()
-            if scaler:
-                scale = scaler[0]
-            self.stream.write((chunk * scale).astype(np.int16).tostring())
+            self.stream.write((chunk * scaler[0]).astype(np.int16).tostring())
 
 
 class Playlist:

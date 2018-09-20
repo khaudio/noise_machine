@@ -76,7 +76,6 @@ class Playlist:
         self.verbose = verbose
         self.skip = False
         self._scaler = deque((0.5,), maxlen=1)
-        self.scale = .5
         self.scan(filepath)
         self.current = self.files[0]
 
@@ -150,14 +149,14 @@ class Playlist:
 
     @scale.setter
     def scale(self, val):
+        assert isinstance(val, (int, float)), 'Must be int or float'
+        if val <= 0:
+            scaled = 0
+        elif val >= 1:
+            scaled = 1
+        else:
+            scaled = val
         with self.lock:
-            assert isinstance(val, (int, float)), 'Must be int or float'
-            if val <= 0:
-                scaled = 0
-            elif val >= 1:
-                scaled = 1
-            else:
-                scaled = val
             self._scaler.append(scaled)
             self.lastScale = scaled
             if self.verbose:
@@ -199,10 +198,12 @@ class Playlist:
         self.skip = True
 
     def mute(self):
+        print('Muting')
         self.lastScale = self.scale
         self.scale = 0
 
     def unmute(self):
+        print('Unmuting')
         self.scale = self.lastScale
 
     def toggle_mute(self):

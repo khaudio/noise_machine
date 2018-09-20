@@ -4,6 +4,7 @@ from collections import deque
 from itertools import cycle
 from os import scandir, path
 from pyaudio import PyAudio
+import numpy as np
 import wave
 
 """A simple audio playlist with selectable looping sounds"""
@@ -17,15 +18,15 @@ class SkipTrack(Exception):
     pass
 
 
-class Player(PyAudio):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.terminate()
+# class Player(PyAudio):
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+#
+#     def __enter__(self):
+#         return self
+#
+#     def __exit__(self, exc_type, exc_value, traceback):
+#         self.terminate()
 
 
 class Sound:
@@ -58,10 +59,16 @@ class Sound:
 
     @staticmethod
     def load(wav, chunkSize=1024, array=True):
-        chunk = np.frombuffer(chunk, dtype=np.int16) if array else wav.readframes(chunkSize)
-        while chunk > 0:
-            yield chunk
-            chunk = np.frombuffer(chunk, dtype=np.int16) if array else wav.readframes(chunkSize)
+        chunk = wav.readframes(chunkSize)
+        if array:
+            data = np.frombuffer(chunk, dtype=np.int16)
+        while chunk:
+            if array:
+                yield data
+                data = np.frombuffer(chunk, dtype=np.int16)
+            else:
+                yield chunk
+            chunk = wav.readframes(chunkSize)
 
     def play(self, skip=None, scale=1.0):
         for chunk in (cycle(self.buffer) if self.loop else self.buffer):
@@ -75,7 +82,7 @@ class Sound:
 class Playlist:
     def __init__(self, directory=None, files=None, repeat=True, verbose=True):
         self.alive = True
-        self.player, self.files = Player(), []
+        self.player, self.files = PyAudio(), []
         self.current, self.index = None, 0
         self.repeat, self.repeated = repeat, 0
         self.verbose = verbose

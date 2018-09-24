@@ -155,7 +155,7 @@ class Playlist:
         elif val >= 1:
             scaled = 1
         else:
-            scaled = val
+            scaled = round(val, 2)
             if scaled > 0:
                 self.lastScaled = scaled
         with self.lock:

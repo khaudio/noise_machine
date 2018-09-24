@@ -26,9 +26,9 @@ class QuadratureEncoder:
             clock, data = self.clock.value, self.data.value
             if clock != self.last:
                 if clock ^ data:
-                    yield -.05
+                    yield -.01
                 else:
-                    yield .05
+                    yield .01
                 self.last = clock
         except Exception as e:
             print(e)

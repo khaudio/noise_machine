@@ -60,9 +60,9 @@ class Sound:
                 yield chunk
             chunk = wav.readframes(chunkSize)
 
-    def play(self, skip=None, scaler=(1.0,)):
+    def play(self, skipper=(False,), scaler=(1.0,)):
         for chunk in (cycle(self.buffer) if self.loop else self.buffer):
-            if skip:
+            if skipper[0]:
                 raise SkipTrack()
             self.stream.write((chunk * scaler[0]).astype(np.int16).tostring())
 
@@ -74,7 +74,7 @@ class Playlist:
         self.current, self.index = None, 0
         self.repeat, self.repeated = repeat, 0
         self.verbose = verbose
-        self.skip = False
+        self._skipper = deque((False,), maxlen=1)
         self._scaler = deque((0.5,), maxlen=1)
         self.scan(filepath)
         self.current = self.files[0]
@@ -163,6 +163,14 @@ class Playlist:
         if self.verbose:
             print('Scale: {}'.format(self._scaler[0]))
 
+    @property
+    def skipTrack(self):
+        return self._skipper[0]
+
+    @skipTrack.setter
+    def skipTrack(self, val):
+        self._skipper.append(bool(val))
+
     def increment_scale(self, increment=.1):
         self.scale += increment
 
@@ -189,14 +197,14 @@ class Playlist:
             with Sound(self.player, filepath, **kwargs) as sound:
                 if self.verbose:
                     print('Playing {}'.format(path.basename(filepath)))
-                sound.play(self.skip, scaler=self._scaler)
+                sound.play(self._skipper, scaler=self._scaler)
         except SkipTrack:
             return
 
     def skip(self):
         if self.verbose:
             print('Skipping')
-        self.skip = True
+        self.skipTrack = True
 
     def mute(self):
         print('Muting')

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from gpiozero import Button, DigitalInputDevice
+from gpiozero import Button, DigitalInputDevice, LED
 from pyplayer import Playlist
 from threading import Thread
 from time import sleep
@@ -53,7 +53,9 @@ class NoiseMachine(Playlist):
         self.skipButton.when_pressed = super().skip
         self.muteButton = Button(muteButton, bounce_time=.005)
         self.muteButton.when_pressed = super().toggle_mute
-        self.devices = (self.volumeRotary, self.skipButton, self.muteButton)
+        self.led = LED(25)
+        self.led.on()
+        self.devices = (self.volumeRotary, self.skipButton, self.muteButton, self.led)
 
     def __enter__(self):
         return self
@@ -84,5 +86,5 @@ class NoiseMachine(Playlist):
 
 
 if __name__ == '__main__':
-    with NoiseMachine('./Other/audio_files') as machine:
+    with NoiseMachine('./audio_files') as machine:
         machine.start(loop=True)

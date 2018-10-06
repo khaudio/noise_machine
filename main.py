@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from gpiozero import Button, DigitalInputDevice, LED
+from gpiozero.exc import GPIODeviceClosed
 from pyplayer import Playlist
 from threading import Thread
 from time import sleep
@@ -15,6 +16,12 @@ class QuadratureEncoder:
         self.clock = DigitalInputDevice(clockPin)
         self.data = DigitalInputDevice(dataPin)
         self.last = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
 
     def close(self):
         self.alive = False
@@ -61,6 +68,7 @@ class NoiseMachine(Playlist):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        self.led.off()
         for device in self.devices:
             device.close()
         self.volumeMonitor.join()
@@ -81,10 +89,13 @@ class NoiseMachine(Playlist):
             self.scale = .5
 
     def monitor_volume(self):
-        for increment in self.volumeRotary.monitor():
-            super().increment_scale(increment)
+        try:
+            for increment in self.volumeRotary.monitor():
+                super().increment_scale(increment)
+        except GPIODeviceClosed:
+            return
 
 
 if __name__ == '__main__':
-    with NoiseMachine('./audio_files') as machine:
+    with NoiseMachine('/home/pi/noise_machine/audio_files') as machine:
         machine.start(loop=True)

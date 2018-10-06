@@ -25,7 +25,8 @@ class Sound:
         with wave.open(filename, 'rb') as wav:
             self.stream = player.open(
                     format=player.get_format_from_width(wav.getsampwidth()),
-                    channels=wav.getnchannels(),
+                    # channels=wav.getnchannels(),
+                    channels=2,
                     rate=wav.getframerate(),
                     output=True
                 )
@@ -192,8 +193,8 @@ class Playlist:
 
     def play(self, filepath, **kwargs):
         assert self.alive
+        self.skipTrack = False
         try:
-            self.skip = False
             with Sound(self.player, filepath, **kwargs) as sound:
                 if self.verbose:
                     print('Playing {}'.format(path.basename(filepath)))
